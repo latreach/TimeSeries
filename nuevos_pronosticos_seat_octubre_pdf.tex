@@ -1,0 +1,327 @@
+\documentclass[ignorenonframetext,]{beamer}
+\usetheme{CambridgeUS}
+\usecolortheme{sidebartab}
+\usefonttheme{structuresmallcapsserif}
+\setbeamertemplate{caption}[numbered]
+\setbeamertemplate{caption label separator}{: }
+\setbeamercolor{caption name}{fg=normal text.fg}
+\usepackage{lmodern}
+\usepackage{amssymb,amsmath}
+\usepackage{ifxetex,ifluatex}
+\usepackage{fixltx2e} % provides \textsubscript
+\ifnum 0\ifxetex 1\fi\ifluatex 1\fi=0 % if pdftex
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+\else % if luatex or xelatex
+  \ifxetex
+    \usepackage{mathspec}
+  \else
+    \usepackage{fontspec}
+  \fi
+  \defaultfontfeatures{Ligatures=TeX,Scale=MatchLowercase}
+  \newcommand{\euro}{€}
+\fi
+% use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+% use microtype if available
+\IfFileExists{microtype.sty}{%
+\usepackage{microtype}
+\UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\newif\ifbibliography
+\usepackage{graphicx,grffile}
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+\def\maxheight{\ifdim\Gin@nat@height>\textheight0.8\textheight\else\Gin@nat@height\fi}
+\makeatother
+% Scale images if necessary, so that they will not overflow the page
+% margins by default, and it is still possible to overwrite the defaults
+% using explicit options in \includegraphics[width, height, ...]{}
+\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+
+% Prevent slide breaks in the middle of a paragraph:
+\widowpenalties 1 10000
+\raggedbottom
+
+% Comment these out if you don't want a slide with just the
+% part/section/subsection/subsubsection title:
+\AtBeginPart{
+  \let\insertpartnumber\relax
+  \let\partname\relax
+  \frame{\partpage}
+}
+\AtBeginSection{
+  \ifbibliography
+  \else
+    \let\insertsectionnumber\relax
+    \let\sectionname\relax
+    \frame{\sectionpage}
+  \fi
+}
+\AtBeginSubsection{
+  \let\insertsubsectionnumber\relax
+  \let\subsectionname\relax
+  \frame{\subsectionpage}
+}
+
+\setlength{\emergencystretch}{3em}  % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\setcounter{secnumdepth}{0}
+
+\title{SEAT de México}
+\subtitle{Análisis y pronóstico de redes sociales SEAT}
+\author{Data Science Area: Social Data Statistics}
+\date{2016-11-23}
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\rhead{\includegraphics[width = .075\textwidth]{Logo2a.png}}
+
+\begin{document}
+\frame{\titlepage}
+
+\begin{frame}{Introducción}
+
+El presente análisis tiene como objetivo dar a conocer los pronósticos
+de crecimiento de las principales redes sociales de SEAT México que
+involucran (Facebook, Twitter e Instagram).
+
+Por otro lado, para el caso concreto de Facebook e Instagram, se
+calcularon los pronósticos de enganche (Engagement en inglés) y
+Menciones respectivamente.
+
+Además de esto, se realizaron pronósticos sobre las visitas al sitio web
+de SEAT, además de las búsquedas de concesionarias (``Dealer search'') y
+``Car configurations''
+
+\end{frame}
+
+\begin{frame}{Origen de los datos}
+
+\begin{itemize}
+\tightlist
+\item
+  Facebook: \href{https://www.facebook.com/SEAT.Mexico}{SEAT México}
+
+  \begin{itemize}
+  \tightlist
+  \item
+    Rango de tiempo: (2016-02-01/2016-10-26)
+  \item
+    Periodicidad de la muestra: Diaria y mensual
+  \end{itemize}
+\item
+  Twitter: \href{https://twitter.com/SEAT_Mexico}{SEAT\_México}
+
+  \begin{itemize}
+  \tightlist
+  \item
+    Rango de tiempo: (2015-12-01/2016-11-05, 2013-01-01/2016-10-23)
+  \item
+    Periodicidad de la muestra: Diaria
+  \end{itemize}
+\item
+  Instagram:
+  \href{https://www.instagram.com/seatmexico/?hl=es}{SEAT-México}
+
+  \begin{itemize}
+  \tightlist
+  \item
+    Rango de tiempo: (2014-2016 y 2015-2016)
+  \item
+    Periodicidad de la muestra: Diaria
+  \end{itemize}
+\item
+  Sitio Web: \href{http://www.seat.mx/}{SEAT-México}
+
+  \begin{itemize}
+  \tightlist
+  \item
+    Rango de tiempo: (2015-07-01/2016-10-26 y 2015-10-01/2016-10-26)
+  \item
+    Periodicidad de la muestra: Diaria y mensual
+  \end{itemize}
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}{Metodología}
+
+Los datos fueron ajustados a modelos de tipo SARIMA y regresiones no
+lineales que obedecen a modelos exponenciales y logísticos.
+
+\[
+SARIMA: \Phi_{P} (B^{S}) \phi(B) \nabla_{S}^{D} \nabla^{d} x_{t} = 
+        \delta + \varTheta_{Q} (B^S) \theta(B) w_t
+\]
+
+\[
+Logístico: \dot x = rx (1 - x/k)
+\]
+
+\[
+Exponencial: P_{t} = P_{0}(1+r)^t
+\]
+
+Los cuales son modelos estadísticos que utilizan datos del pasado de una
+variable en específico para posteriormente, encontrar patrones y
+realizar pronósticos sobre su comportamiento en el futuro cercano.
+
+\tiny
+Todos estos análisis fueron realizados con el software estadístico R (R
+Core Team 2016) en conjunto con los paquetes forecast (Hyndman 2016) y
+xts(Ryan y Ulrich 2014)
+
+\end{frame}
+
+\section{Facebook}\label{facebook}
+
+\begin{frame}{Facebook}
+
+El pronóstico de crecimiento de fans online para Facebook de SEAT fue
+realizado utilizando modelos SARIMA.
+
+Para este caso se encontraron dos modelos diferentes, ambos
+estadísticamente correctos, uno sugiere un crecimiento en el número de
+fans online de Facebook, el otro sugiere un ligero decrecimiento en el
+número de fans online para el mes de diciembre de 2016.
+
+\end{frame}
+
+\begin{frame}{Facebook}
+
+\begin{block}{Fans totales}
+
+\includegraphics{nuevos_pronosticos_seat_octubre_pdf_files/figure-beamer/unnamed-chunk-1-1.pdf}
+
+Hasta el momento se tienen \textbf{1,603,706} fans totales, que de
+acuerdo a la comparación con la cifra del último día de 2015
+(\textbf{1,574,514 fans totales}) corresponde a un crecimiento de
+\textbf{1.85\%}.
+
+\end{block}
+
+\end{frame}
+
+\begin{frame}{Facebook}
+
+\begin{block}{Pronóstico para fans online}
+
+\includegraphics{nuevos_pronosticos_seat_octubre_pdf_files/figure-beamer/unnamed-chunk-2-1.pdf}
+
+Se espera un máximo de \textbf{1,272,064} fans totales para el mes de
+Diciembre de 2016. El crecimiento pronósticado es de \textbf{1.95\%} ,
+actualmente se tiene un crecimiento de \textbf{0.95\%}
+(\textbf{1,259,480} fans online)
+
+\end{block}
+
+\end{frame}
+
+\begin{frame}{Facebook}
+
+\begin{block}{Pronóstico de ``Engagement''}
+
+\includegraphics{nuevos_pronosticos_seat_octubre_pdf_files/figure-beamer/unnamed-chunk-3-1.pdf}
+
+Se espera un \textbf{1\%} de ``engagement'' para el primero de Enero de
+2017
+
+\end{block}
+
+\end{frame}
+
+\section{Twitter}\label{twitter}
+
+\begin{frame}{Twitter}
+
+\begin{block}{Pronóstico de crecimiento de seguidores}
+
+\includegraphics{nuevos_pronosticos_seat_octubre_pdf_files/figure-beamer/unnamed-chunk-4-1.pdf}
+
+Se espera un máximo de \textbf{302,439} seguidores para el mes de
+Diciembre de 2016. El crecimiento pronósticado es de \textbf{6.63\%}. El
+crecimiento actual es de \textbf{5.9\%}, es decir \textbf{300612}
+seguidores.
+
+\end{block}
+
+\end{frame}
+
+\begin{frame}{Twitter}
+
+\begin{block}{Pronóstico de menciones}
+
+\includegraphics{nuevos_pronosticos_seat_octubre_pdf_files/figure-beamer/unnamed-chunk-5-1.pdf}
+
+\tiny
+Las menciones tienen un comportamiento estable en el tiempo (media y
+varianza no cambian) por lo que se espera una media de \textbf{27.4}
+menciones por día con un posible total de \textbf{1918} nuevas menciones
+esperadas en los próximos días del año.
+
+\end{block}
+
+\end{frame}
+
+\section{Instagram}\label{instagram}
+
+\begin{frame}{Instagram}
+
+\includegraphics{nuevos_pronosticos_seat_octubre_pdf_files/figure-beamer/unnamed-chunk-6-1.pdf}
+
+Este modelo fue tomado en cuenta con datos tomados desde el 31 de
+Diciembre de 2015. Se espera un máximo de \textbf{31,441} seguidores
+para el mes de Diciembre de 2016. El crecimiento pronósticado es de
+\textbf{454\%} Actualmente el crecimiento es de \textbf{377\%}
+
+\end{frame}
+
+\section{Web}\label{web}
+
+\begin{frame}{Web}
+
+\begin{block}{Visitas}
+
+\includegraphics{nuevos_pronosticos_seat_octubre_pdf_files/figure-beamer/unnamed-chunk-7-1.pdf}
+
+La serie temporal de las visitas es estable en la mayoría del tiempo,
+por lo que se pronostica un promedio de \textbf{19,031} visitas diarias
+con un posible total de \textbf{1332170} visitas totales para el resto
+de año.
+
+\end{block}
+
+\end{frame}
+
+\begin{frame}{Web}
+
+\begin{block}{Búsqueda de concesionarias}
+
+\includegraphics{nuevos_pronosticos_seat_octubre_pdf_files/figure-beamer/unnamed-chunk-8-1.pdf}
+
+Para el caso de ``Dealer Search'', se pronostica un promedio de
+\textbf{240} búsquedas al día, es decir tiene una tendencia estable
+similar a la que ocurre a partir de Julio del presente año con un total
+de \textbf{20345} búsquedas en lo que resta del año.
+
+\end{block}
+
+\end{frame}
+
+\begin{frame}{Web}
+
+\begin{block}{``Car configurations''}
+
+\includegraphics{nuevos_pronosticos_seat_octubre_pdf_files/figure-beamer/unnamed-chunk-9-1.pdf}
+
+Para el caso de ``Car configurations'', se pronostica un promedio de
+\textbf{64,441} configuraciones mensuales para lo que resta del año.
+
+\end{block}
+
+\end{frame}
+
+\section{Gracias por su atención}\label{gracias-por-su-atencion}
+
+\end{document}
