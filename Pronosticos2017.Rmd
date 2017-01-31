@@ -1,31 +1,43 @@
-# Librerías ---------------------------------------------------------------
-library(magrittr)
-c("dplyr","tidyr","lubridate","tseries", "astsa","forecast","ggplot2", 
-  "lattice", "dygraphs","XLConnect", "palettetown", "xts", "Rfacebook") %>%  
-  sapply(require, character.only=T)
-
-####################################
-#Creado por Fernando Dorantes Nieto <(°) 
-#                                     ( >)"
-#                                      /|
-####################################
-
-# Conexión a facebook -----------------------------------------------------
-fb_oauth <- fbOAuth(app_id="1611650985792093", 
-                    app_secret="35ff99b85e4bf364b35faeb0a850dbd4", 
-                    extended_permissions = TRUE)
-save(fb_oauth, file="fb_oauth")
-load("~/fb_oauth")
-idFB_seat = 113144262054871
+---
+title: "SEAT de México"
+subtitle: 'Análisis y pronóstico de redes sociales SEAT'
+author: " Data Science Area: Social Data Statistics"
+date: "`r Sys.Date()`"
+output: 
+      beamer_presentation:
+        theme: CambridgeUS
+        colortheme: "sidebartab"
+        font: "structuresmallcapsserif"
+        keep_tex: true
+        includes:
+            in_header: header.tex
+---
 
 
-# Facebook ----------------------------------------------------------------
+```{r librerias, echo = FALSE, comment = FALSE, message = FALSE}
+library(XLConnect)
+library(lubridate)
+library(dplyr)
+library(tidyr)
+library(forecast)
+library(astsa)
+library(xts)
+#library(dygraphs)
+library(tseries)
+library(ggplot2)
+library(jsonlite)
+library(rjson)
+library(XLConnect)
+```
 
-## Crecimiento
+
+```{r facebook, echo = FALSE, include = FALSE}
+TotalF = loadWorkbook(
+  "~/local/TimeSeries17/FB - Fans - SEAT México - 2017-01-27.xlsx") %>% 
+  readWorksheet(sheet=2, startRow=2) %>%  select(Date, Fans)
+
 fb = read.csv("~/local/Sandra_TimeSeries/2016.csv") %>% 
   mutate(Date = as.Date(Date))
-# fb = read.csv("~/local/TimeSeries17/2016.csv") %>% 
-#   mutate(Date = as.Date(Date))
 
 nombresFB<- names(fb)
 
@@ -46,118 +58,16 @@ modelo1 = TS %>%  na.omit %>%
   Arima(order=c(1,0,1), seasonal = c(1,1,1), include.drift = T) %>% 
   forecast(h = 125) 
 
-modelo2 = TS %>%  na.omit %>% 
-  coredata %>%  
-  ts(frequency = 7) %>% 
-  Arima(order=c(1,0,1), seasonal = c(1,1,1)) %>% 
-  forecast(h = 125) 
-
-
 ultimo = index(xts::last(TS)) %>% as.POSIXct()
+
 pronostico1 = xts(modelo1$mean, seq.POSIXt(ultimo +1, length.out = 125, 
-                                           by= "day"))
-pronostico2 = xts(modelo2$mean, seq.POSIXt(ultimo +1, length.out = 125, 
                                            by= "day"))
 
 grafo1 = cbind(TS %>%  na.omit(), pronostico1)
 names(grafo1) <- c("Crecimiento observado de Facebook", "Estimación")
 
-dygraph(grafo1) %>% 
-  dyHighlight(highlightSeriesOpts = list(strokeWidth = 3),
-              highlightSeriesBackgroundAlpha = 0.2,
-              hideOnMouseOut= T) %>% 
-  dyAxis("y", label="Fans online") %>% 
-  dyOptions(drawGrid = F) %>% 
-  dyEvent(ultimo, label= "Inician Pronósticos")
-
-
 ggGrafo1 = data.frame(fecha = time(grafo1),grafo1 %>% data.frame() ) 
-
-
-ggGrafo1 %>%  gather(tipo, valor, -fecha) %>%  
-  ggplot(aes(y=valor, x=fecha, colour=tipo))+
-  geom_point(size=0.2)+geom_line()+theme_bw()+
-  theme(panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),legend.position = "top",
-        axis.text.x = element_text(angle=45, hjust=1))+
-  scale_x_date(date_breaks = "2 months") +
-  scale_y_continuous(labels = scales::comma)+ ##necesita el paquete scales
-  xlab("Fecha") + ylab("Fans Online")+
-  scale_color_manual(values=c("#3B5998", "darkred"), name="",
-                     labels=c("Observado Facebook", "Pronóstico" ))
-  # annotate("text",x=as.Date("2017-01-27"), y=1230000, 
-  #          label="Inician pronósticos") 
-  
-  
-
-grafo2 = cbind(TS %>%  na.omit(), pronostico2)
-names(grafo2) <- c("Crecimiento observado de Facebook", "Estimación")
-
-dygraph(grafo2) %>% 
-  dyHighlight(highlightSeriesOpts = list(strokeWidth = 3),
-              highlightSeriesBackgroundAlpha = 0.2,
-              hideOnMouseOut= T) %>% 
-  dyAxis("y", label="Fans online") %>% 
-  dyOptions(drawGrid = F) %>% 
-  dyEvent(ultimo, label= "Inician Pronósticos")
-
-crecimiento_m1 = (1303588 - 1247625)/ 1247625*100
-crecimiento_m2 = (1277393 - 1247625)/ 1247625*100
-crecimiento_m3 = (1278300 - 1247625)/ 1247625*100
-paste("Sandy, tu crecimiento es de ", crecimiento_m1, "%")
-paste("Sandy, tu crecimiento es de ", crecimiento_m2, "%")
-paste("Sandy, tu crecimiento actual es de  ", crecimiento_m3, "%")
-
-
-
-
-## Engagement
-TotalF = loadWorkbook(
-  "~/local/TimeSeries17/FB - Fans - SEAT México - 2017-01-27.xlsx") %>% 
-  readWorksheet(sheet=2, startRow=2) %>%  select(Date, Fans)
-TotalF %>%  mutate(Date= as.Date(Date)) %>% 
-  ggplot(aes(x=Date, y=Fans))+
-  geom_line(size=1, col="steelblue")+
-  theme_bw()+
-  theme(panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        axis.text.x = element_text(angle=45, hjust=1))+
-  scale_x_date(date_breaks = "6 months") +
-  scale_y_continuous(labels = scales::comma)+ ##necesita el paquete scales
-  xlab("Fecha") + ylab("Fans Totales")+ 
-  annotate("text",x=as.Date("2017-01-20"), 
-           y=1530000, label=format(max(TotalF$Fans),
-                                   big.mark = ",", scientific = F))
-  
-
-INT1 = getPage(idFB_seat, since="2013-01-01", until="2013-06-30",
-        token=fb_oauth, reactions = T,n= 1000)
-
-INT2 = getPage(idFB_seat, since="2013-07-01", until="2013-12-31",
-        token=fb_oauth, reactions = T,n= 1500)
-
-INT3 = getPage(idFB_seat, since="2014-01-01", until="2014-06-30",
-        token=fb_oauth, reactions = T,n= 1500)
-
-INT4 = getPage(idFB_seat, since="2014-07-01", until="2014-12-31",
-        token=fb_oauth, reactions = T,n= 1500)
-
-INT5 = getPage(idFB_seat, since="2015-01-01", until="2015-06-30",
-        token=fb_oauth, reactions = T,n= 1500)
-
-INT6 = getPage(idFB_seat, since="2015-07-01", until="2015-12-31",
-        token=fb_oauth, reactions = T,n= 1500)
-
-INT7 = getPage(idFB_seat, since="2016-01-01", until="2016-06-30",
-        token=fb_oauth, reactions = T,n= 1500)
-
-INT8 = getPage(idFB_seat, since="2016-07-01", until="2016-12-31",
-        token=fb_oauth, reactions = T,n= 1500)
-
-INT9 = getPage(idFB_seat, since="2017-01-01", until="2017-01-27",
-        token=fb_oauth, reactions = T,n= 1500)
-
-InteracionSeat = rbind(INT1,INT2, INT3, INT4, INT5, INT6,INT7,INT8, INT9)
+##enganche
 
 fechas = seq(ymd('2013-01-01'),ymd('2016-12-01'), by = 'months')
 
@@ -207,54 +117,16 @@ grafoEn %>%  class
 
 ggGrafoEn = data.frame(fecha = time(grafoEn),grafoEn %>% data.frame() ) 
 
-ggGrafoEn %>%  gather(tipo, valor, -fecha) %>% 
-  ggplot(aes(x=fecha, y= valor, color= tipo))+ geom_point()+ geom_line()+
-  theme_bw()+
-  theme(panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        axis.text.x = element_text(angle=45, hjust=1),
-        legend.position="top")+
-  scale_x_date(date_breaks = "6 months") +
-  scale_y_continuous(labels = scales::comma)+ ##necesita el paquete scales
-  xlab("Fecha") + ylab("Enganche")
+```
 
-# Twitter -----------------------------------------------------------------
-##Crecimiento
+
+```{r twitter, echo = FALSE, include = FALSE}
 TW = loadWorkbook(
   "~/local/TimeSeries17/TW - Followers - SEAT México - 2017-01-27.xlsx") %>% 
   readWorksheet(sheet=2,startRow = 2) %>%  select(Date, Followers) %>% 
   mutate(Date = as.Date(Date))
 
 TSTW = xts(TW[,-1], TW[,1])
-fechas_tw = seq(ymd(20120824), by="day", length.out = length(TSTW[,1]))
-seguidores_t = cbind(seguidores= TSTW,
-                     diferenciado= diff(TSTW),
-                     cambio_seguidores = diff.xts(log(TSTW)))
-ultimo_tw = index(xts::last(TSTW))
-TIME_tw = seq_along(TSTW[,1])
-seguidores_t = data.frame(fechas_tw, seguidores = 
-                            seguidores_t$seguidores %>%  as.numeric())
-numeros = seguidores_t$seguidores
-
-logistico_tw = 
-  nls(numeros ~K*P0*exp(R*TIME_tw)/(K+P0 *(exp(R*TIME_tw)-1)),
-      start = list(P0 = min(seguidores_t$seguidores, na.rm = T),
-                   K  = max(seguidores_t$seguidores, na.rm = T),
-                   R = 0.01
-      )
-  ) 
-
-TIME_PTW = 1:(length(TIME_tw) + 125)
-DATE_Ptw = seq(ymd(20120824), by="day", length.out = max(TIME_PTW))
-pred.tw = data.frame(fechas_tw = DATE_Ptw,
-                     pronostico = predict(logistico_tw, 
-                                          newdata = list(TIME_tw = TIME_PTW))) 
-
-twitter_logis = pred.tw %>%  left_join(seguidores_t, by="fechas_tw")
-twitter_logis = xts(twitter_logis[,-1], twitter_logis[,1])
-names(twitter_logis) <- c("Pronóstico de  seguidores", "Seguidores")
-
-##a partir de 2015
 seguidoresT15 = TSTW["2015-12-01/"] 
 fechas_tw15 = seq(ymd(20151201), by="day", 
                   length.out = length(seguidoresT15[,1]))
@@ -286,29 +158,11 @@ pred.tw15 = data.frame(fechas_tw=DATE_Ptw15,
 twitter_logis15 = pred.tw15 %>%  left_join(seguidoresT15, by="fechas_tw")
 twitter_logis15 = xts(twitter_logis15[,-1], twitter_logis15[,1])
 names(twitter_logis15) <- c("Pronóstico", "Seguidores")
-twitter_logis15 
-
-(1-(283615/303719))*100
-(1-(301303/303719))*100
-
-
-
 ggGrafoTW = data.frame(fecha = time(twitter_logis15),twitter_logis15 %>%
                          data.frame()) 
-ggGrafoTW %>%  gather(tipo, valor, -fecha) %>%  
-  ggplot(aes(x= fecha, y= valor, color= tipo))+ geom_line()+
-  theme_bw()+
-  theme(panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        axis.text.x = element_text(angle=45, hjust=1),
-        legend.position="top")+
-  scale_x_date(date_breaks = "2 months") +
-  scale_y_continuous(labels = scales::comma)+ ##necesita el paquete scales
-  xlab("Fecha") + ylab("Seguidores")+
-  scale_color_manual(values=c("#326ada", "black"), name="")
-  
 
 ##Menciones
+
 Mentions = loadWorkbook(
   "~/local/TimeSeries17/TW - Engagement - SEAT México - 2017-01-27.xlsx") %>% 
   readWorksheet(sheet=4,startRow = 2) %>%  select(Date, Mentions) %>% 
@@ -335,29 +189,12 @@ names(grafM) <- c('Observado "Menciones"', "Estimación")
 gggrafM = data.frame(fecha = time(grafM),grafM %>%
                          data.frame()) 
 
-gggrafM %>% gather(tipo, valor, -fecha) %>% 
-  ggplot(aes(x=fecha, y=valor, color=tipo))+geom_line()+
-  theme_bw()+
-  theme(panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        axis.text.x = element_text(angle=45, hjust=1),
-        legend.position="top")+
-  scale_x_date(date_breaks = "6 months") +
-  scale_y_continuous(labels = scales::comma)+ ##necesita el paquete scales
-  xlab("Fecha") + ylab("Menciones")+
-  scale_color_manual(values=c("#326ada", "black"), name="")
-  
-
-##RetTweets
+#Retweets
 RTW = loadWorkbook(
   "~/local/TimeSeries17/TW - Engagement - SEAT México - 2017-01-27.xlsx") %>% 
   readWorksheet(sheet=3,startRow = 2) %>%  select(Date, Retweets) %>% 
   mutate(Date = as.Date(Date))
 TSRTW = xts(RTW[,-1], RTW[,1]) %>%  na.omit() %>% .['2016-01-01/']
-
-TSRTW %>% coredata %>%  ts %>% auto.arima() %>% forecast(125) %>%  plot
-TSRTW %>% coredata %>%  ts %>% Arima(order=c(2,1,3)) %>% forecast(125) %>% .$mean 
-
 modelRTW = TSRTW %>% coredata %>%  ts %>% Arima(order=c(1,0,3)) %>%
   forecast(125) 
 
@@ -369,22 +206,11 @@ names(grafRTW) <- c('Observado "Retweets"', "Estimación")
 gggrafRTW = data.frame(fecha = time(grafRTW),grafRTW %>%
                        data.frame()) 
 
-gggrafRTW %>% gather(tipo, valor, -fecha) %>% 
-  ggplot(aes(x=fecha, y=valor, color=tipo))+geom_line()+
-  theme_bw()+
-  theme(panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        axis.text.x = element_text(angle=45, hjust=1),
-        legend.position="top")+
-  scale_x_date(date_breaks = "2 months") +
-  scale_y_continuous(labels = scales::comma)+ ##necesita el paquete scales
-  xlab("Fecha") + ylab("Retweets")+
-  scale_color_manual(values=c("#326ada", "black"), name="")
+
+```
 
 
-
-# Instagram ---------------------------------------------------------------
-#Crecimiento
+```{r instagram, echo = FALSE, include = FALSE}
 IN = loadWorkbook(
   "~/local/TimeSeries17/IG - Followers - SEAT México - 2017-01-27.xlsx") %>% 
   readWorksheet(sheet=2,startRow = 2) %>% select(Date, Followers) %>% 
@@ -392,8 +218,8 @@ IN = loadWorkbook(
 TSIN = xts(IN[,-1], IN[,1]) %>% .["2013-12-13/"]
 fechas_ins = seq(ymd(20131213), by="day", length.out = length(TSIN[,1]))
 TIME_diario = seq_along(TSIN[,1])
-nlm = nls(TSIN[,1] ~ P0 * exp(R * TIME_diario), 
-          start = list(P0 = 1e3,R = 0.005))
+nlm = nls(TSIN[,1] ~ P0 * exp(R * TIME_diario), start = list(P0 = 1e3, 
+                                                                   R = 0.005))
 
 TIME_PRED = 1:(length(TIME_diario) + 125)
 pred.XIN = data.frame(
@@ -432,42 +258,19 @@ insta_logis = pred.Ins %>%  left_join(XIN, by = "fechas_ins")
 
 insta_logis = xts(insta_logis[, -1], insta_logis[, 1])
 insta_logis = insta_logis[,-2]
-34810/5699*100
-(1-(33208/34810))*100
 
 names(insta_logis) = c("Pronóstico de seguidores","Seguidores")
 
 insta_logisgg = cbind(fechas = time(insta_logis), insta_logis %>%
                         data.frame())
 names(insta_logisgg)<-c("fechas", "pronostico", "seguidores")
-
 insta_logisgg = insta_logisgg  %>%  gather(tipo, valor, -fechas)
-
-insta_logisgg %>%  ggplot(aes(x=fechas, y=valor, color=tipo))+
-  geom_line()+
-  theme_bw()+
-  theme(panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        axis.text.x = element_text(angle=45, hjust=1),
-        legend.position="top")+
-  scale_x_date(date_breaks = "3 months") +
-  scale_y_continuous(labels = scales::comma)+ ##necesita el paquete scales
-  xlab("Fecha") + ylab("Seguidores")+
-  scale_color_manual(values=c("#326ada", "darkred"), name="",
-                     labels=c("Pronóstico","Seguidores"))
-
-
-#Interacción
+##interacción
 INIG = loadWorkbook(
   "~/local/TimeSeries17/IG - Engagement - SEAT México - 2017-01-27.xlsx") %>% 
   readWorksheet(sheet=3,startRow = 2) %>%  select(Date, Total.Interactions) %>% 
   mutate(Date = as.Date(Date))
 TSINIG = xts(INIG[,-1], INIG[,1]) %>%  na.omit
-
-INIG %>%  mutate(anio= year(Date), mes=month(Date)) %>% na.omit() %>% 
-  select(anio, mes, Total.Interactions) %>% 
-  group_by(anio, mes) %>% summarise(promedio = mean(Total.Interactions %>% na.omit()))
-
 INIG = INIG %>%  mutate(anio= year(Date), mes=month(Date)) %>% 
   select(anio, mes, Total.Interactions) %>% 
   group_by(anio, mes) %>% summarise(suma = sum(Total.Interactions %>% na.omit())) 
@@ -477,11 +280,9 @@ fechasInig = seq.POSIXt(from= as.POSIXct('2013-12-01'),
 
 INIG = INIG %>%as.data.frame %>%  cbind(data.frame(fechasInig)) %>%  
   select(fechasInig, suma) %>% mutate(suma=ifelse(suma==0,NA, suma)) %>% na.omit()
-
 TSINIG = xts(INIG[,-1], as.Date(INIG[,1]))
-TSINIG %>%  plot(type="b")
-
 tmpIG =TSINIG[,1] %>%  na.omit()  %>% as.numeric
+
 tiempoIG = seq_along(tmpIG)
 
 nlm = nls(
@@ -494,7 +295,7 @@ nlm = nls(
   trace = T
 )
 
-time_log = 1:(length(tiempoIG) + 7)
+time_log = 1:(length(tiempoIG) + 8)
 date_log = seq(ymd(20131201), by="month", length.out = max(time_log))
 pred.Ins = data.frame(fechas_ins = date_log,
                       pronostico = predict(nlm, newdata = list(tiempoIG = time_log)))
@@ -503,23 +304,9 @@ TSDATA = data.frame(fechas_ins = time(TSINIG), TSINIG %>% data.frame())
 ggInig = pred.Ins %>% left_join(TSDATA, by="fechas_ins")
 names(ggInig)<-c("Fechas", "Pronostico","Observado")
 
-ggInig %>%  gather(tipo, valor, -Fechas) %>%
-  ggplot(aes(x=Fechas, y=valor, color=tipo))+
-  geom_line()+
-  theme_bw()+
-  theme(panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        axis.text.x = element_text(angle=45, hjust=1),
-        legend.position="top")+
-  scale_x_date(date_breaks = "3 months") +
-  scale_y_continuous(labels = scales::comma)+ ##necesita el paquete scales
-  xlab("Fecha") + ylab("Interacción")+
-  scale_color_manual(values=c("#326ada", "darkred"), name="",
-                     labels=c("Observado","Pronóstico"))
+```
 
-
-# YouTube -----------------------------------------------------------------
-#Crecimiento
+```{r youtube, echo = FALSE, include = FALSE}
 YT = loadWorkbook(
   "~/local/TimeSeries17/YT - Subscribers - SEATdeMexico - 2017-01-27.xlsx") %>% 
   readWorksheet(sheet=2,startRow = 2) %>%  select(Date, Subscribers) %>% 
@@ -541,33 +328,10 @@ YTDATA = data.frame(fechas_YT = time(TSYT), TSYT %>% data.frame())
 ggyt = pred.YT %>% left_join(YTDATA, by="fechas_YT")
 names(ggyt)<-c("Fechas", "Pronostico","Observado")
 
-ggyt %>%  gather(tipo, valor, -Fechas) %>%
-  ggplot(aes(x=Fechas, y=valor, color=tipo))+
-  geom_line()+
-  theme_bw()+
-  theme(panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        axis.text.x = element_text(angle=45, hjust=1),
-        legend.position="top")+
-  scale_x_date(date_breaks = "3 months") +
-  scale_y_continuous(labels = scales::comma)+ ##necesita el paquete scales
-  xlab("Fecha") + ylab("Suscriptores")+
-  scale_color_manual(values=c("#326ada", "darkred"), name="",
-                     labels=c("Observado","Pronóstico"))
-
-# nlmYT = nls(
-#   tmpYT ~K *P0 *exp(R*tiempoYT) / (K + P0 *(exp(R*tiempoYT)-1)),
-#   start = list(
-#     P0 = min(tmpYT, na.rm=T),
-#     K = max(tmpYT, na.rm = T),
-#     R =0.1
-#   ),
-#   trace = T
-# )
+```
 
 
-
-# SeatWeb -----------------------------------------------------------------
+```{r seatMX, echo = FALSE, include = FALSE}
 fechaSeat = seq.POSIXt(from= as.POSIXct("2013-12-30"), 
                        to=as.POSIXct("2017-01-27" ), by="days")
 
@@ -585,11 +349,7 @@ seatWeb = read.csv("~/local/TimeSeries17/seatWebPage.csv") %>%
   mutate(Return.Rate = gsub(",", "", Return.Rate),
          Return.Rate = as.numeric(Return.Rate)) %>% cbind(fechaSeat)  %>% 
   select(-Date)
-  
-xts(seatWeb[,-7], as.Date(seatWeb[,7]) ) %>%.["2015-07-01/"]  %>%
-  dygraph()
 
-# Visitas -----------------------------------------------------------------
 Visitas = seatWeb %>%  select(fechaSeat, Visitas )
 TSVisita = xts(Visitas[,-1], as.Date(Visitas[,1])) %>% .["2015-07-01/"]
 modeloVisita = TSVisita  %>%  na.omit %>% 
@@ -602,31 +362,8 @@ pronosticoV = xts(modeloVisita$mean, seq.POSIXt(ultimoV +1, length.out = 125,
 
 grafoV = cbind(TSVisita %>%  na.omit(), pronosticoV)
 names(grafoV) <- c("Visitas", "Estimación")
-
-dygraph(grafoV) %>% 
-  dyHighlight(highlightSeriesOpts = list(strokeWidth = 3),
-              highlightSeriesBackgroundAlpha = 0.2,
-              hideOnMouseOut= T) %>% 
-  dyAxis("y", label="Visitas") %>% 
-  dyOptions(drawGrid = F) %>% 
-  dyEvent(ultimoV, label= "Inician Pronósticos")
-
 ggVisita = data.frame(fecha = time(grafoV), grafoV %>%  as.data.frame())
-ggVisita %>%  gather(tipo,valor, -fecha) %>%  
-  ggplot(aes(x=fecha, y=valor, color=tipo))+ geom_line()+
-  theme_bw()+
-  theme(panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        axis.text.x = element_text(angle=45, hjust=1),
-        legend.position="top")+
-  scale_x_date(date_breaks = "3 months") +
-  scale_y_continuous(labels = scales::comma)+ ##necesita el paquete scales
-  xlab("Fecha") + ylab("Visitas")+
-  scale_color_manual(values=c("#326ada", "darkred"), name="",
-                     labels=c("Pronóstico","Visitas"))
-  
-
-# Car Configuration -------------------------------------------------------
+## Configuration
 CarConfiguration = seatWeb %>%  select(fechaSeat, CarConfiguration )
 TSCar = xts(CarConfiguration[,-1], as.Date(CarConfiguration[,1])) %>%
   .["2015-07-01/"]
@@ -643,20 +380,7 @@ grafoCar = cbind(TSCar %>%  na.omit(), pronosticoCar)
 names(grafoCar) <- c("Configuraciones", "Estimación")
 ggCar = data.frame(fecha = time(grafoCar), grafoCar %>%  as.data.frame())
 
-ggCar %>%  gather(tipo,valor, -fecha) %>%  
-  ggplot(aes(x=fecha, y=valor, color=tipo))+ geom_line()+
-  theme_bw()+
-  theme(panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        axis.text.x = element_text(angle=45, hjust=1),
-        legend.position="top")+
-  scale_x_date(date_breaks = "3 months") +
-  scale_y_continuous(labels = scales::comma)+ ##necesita el paquete scales
-  xlab("Fecha") + ylab("Configuraciones de autos")+
-  scale_color_manual(values=c("#326ada", "darkred"), name="",
-                     labels=c("Configuraciones","Pronóstico"))
-
-# Return Rate -------------------------------------------------------------
+##Return rate
 ReturnRate = seatWeb %>%  select(fechaSeat, Return.Rate)
 TSReturn = xts(ReturnRate[,-1], as.Date(ReturnRate[,1])) %>%
   .["2015-07-01/"]
@@ -676,22 +400,8 @@ grafoReturn = cbind(TSReturn %>%  na.omit(), pronosticoReturn)
 names(grafoReturn) <- c("Return Rate", "Estimación")
 ggReturn = data.frame(fecha = time(grafoReturn), grafoReturn %>%  
                         as.data.frame())
+##TimeRate
 
-ggReturn %>%  gather(tipo,valor, -fecha) %>%  
-  ggplot(aes(x=fecha, y=valor, color=tipo))+ geom_line()+
-  theme_bw()+
-  theme(panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        axis.text.x = element_text(angle=45, hjust=1),
-        legend.position="top")+
-  scale_x_date(date_breaks = "3 months") +
-  scale_y_continuous(labels = scales::comma)+ ##necesita el paquete scales
-  xlab("Fecha") + ylab("Return Rate")+
-  scale_color_manual(values=c("#326ada", "darkred"), name="",
-                     labels=c("Pronóstico","Return Rate"))
-
-
-# TimeRate ----------------------------------------------------------------
 TimeRate = seatWeb %>%  select(fechaSeat, TimeRate)
 TSTime = xts(TimeRate[,-1], as.Date(TimeRate[,1])) %>%
   .["2015-07-01/"]
@@ -709,21 +419,7 @@ names(grafoRate) <- c("Time Rate", "Estimación")
 ggRate = data.frame(fecha = time(grafoRate), grafoRate %>%  
                         as.data.frame())
 
-ggRate %>%  gather(tipo,valor, -fecha) %>%  
-  ggplot(aes(x=fecha, y=valor, color=tipo))+ geom_line()+
-  theme_bw()+
-  theme(panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        axis.text.x = element_text(angle=45, hjust=1),
-        legend.position="top")+
-  scale_x_date(date_breaks = "3 months") +
-  scale_y_continuous(labels = scales::comma)+ ##necesita el paquete scales
-  xlab("Fecha") + ylab("Time Rate")+
-  scale_color_manual(values=c("#326ada", "darkred"), name="",
-                     labels=c("Pronóstico", "Time Rate"))
-
-
-# Dealer Search -----------------------------------------------------------
+##dealer
 Dealer = seatWeb %>%  select(fechaSeat, DealerSearch)
 TSDealer = xts(Dealer[,-1], as.Date(Dealer[,1])) %>%
   .["2015-10-01/"]
@@ -740,22 +436,7 @@ grafoDealer = cbind(TSDealer %>%  na.omit(), pronosticoDealer)
 names(grafoDealer) <- c("Dealer Search", "Estimación")
 ggDealer = data.frame(fecha = time(grafoDealer), grafoDealer %>%  
                       as.data.frame())
-
-ggDealer %>%  gather(tipo,valor, -fecha) %>%  
-  ggplot(aes(x=fecha, y=valor, color=tipo))+ geom_line()+
-  theme_bw()+
-  theme(panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        axis.text.x = element_text(angle=45, hjust=1),
-        legend.position="top")+
-  scale_x_date(date_breaks = "3 months") +
-  scale_y_continuous(labels = scales::comma)+ ##necesita el paquete scales
-  xlab("Fecha") + ylab("Búsqueda de concesionarias")+
-  scale_color_manual(values=c("#326ada", "darkred"), name="",
-                     labels=c("Búsqueda de concesionarias", "Pronóstico"))
-
-
-# Page Views --------------------------------------------------------------
+##pageViews
 PageViews = seatWeb %>%  select(fechaSeat, PageViews)
 TSPage = xts(PageViews[,-1], as.Date(PageViews[,1])) %>%
   .["2015-07-01/"]
@@ -773,6 +454,367 @@ names(grafoPage) <- c("Page Views", "Estimación")
 ggPage = data.frame(fecha = time(grafoPage), grafoPage %>%  
                         as.data.frame())
 
+
+```
+
+
+```{r fansTotales, echo = FALSE, include = FALSE}
+
+
+```
+
+## Introducción
+El presente análisis tiene como objetivo dar a conocer 
+los pronósticos de crecimiento de las principales redes sociales de SEAT México que involucran (Facebook, Twitter, YouTube e Instagram).
+
+
+Por otro lado, para el caso concreto de Facebook, Twitter e Instagram, se calcularon
+los pronósticos de enganche (Facebook), Menciones, retweets e Interacción(Instagram).
+
+Además de esto, se realizaron pronósticos sobre diversas métricas de las visitas al sitio web de 
+SEAT.
+
+**Dichos pronósticos tienen como fecha límite el mes de Junio del presente año.**
+
+
+## Origen de los datos
+* Facebook: [SEAT México](https://www.facebook.com/SEAT.Mexico)
+    + Rango de tiempo: (2016-02-01/2017-01-27)
+    + Periodicidad de la muestra: Diaria y mensual
+* Twitter: [SEAT_México](https://twitter.com/SEAT_Mexico)
+    + Rango de tiempo: (2015-12-31/2017-01-27, 2012-08-01/2017-01-27)
+    + Periodicidad de la muestra: Diaria
+
+## Origen de los datos
+
+* Instagram: [SEAT-México](https://www.instagram.com/seatmexico/?hl=es)
+    + Rango de tiempo: (2014-2016  y 2015-2016) 
+    + Periodicidad de la muestra: Diaria y mensual
+* YouTube: [SEAT-México](https://www.youtube.com/user/SEATdeMexico)
+    + Rango de tiempo:(2015-01-01/2017-01-27)
+    + Periodicidad de la muestra: Diaria
+* Sitio Web: [SEAT-México](http://www.seat.mx/)
+    + Rango de tiempo: (2013-12-30/2017-01-27) 
+    + Periodicidad de la muestra: Diaria y mensual
+
+
+
+## Metodología
+\scriptsize
+Los datos fueron ajustados a modelos de tipo SARIMA y regresiones no lineales que obedecen a modelos exponenciales y logísticos.
+
+$$
+SARIMA: \Phi_{P} (B^{S}) \phi(B) \nabla_{S}^{D} \nabla^{d} x_{t} = 
+        \delta + \varTheta_{Q} (B^S) \theta(B) w_t
+$$
+
+$$
+Logístico: \dot x = rx (1 - x/k)
+$$
+
+
+$$
+Exponencial: P_{t} = P_{0}(1+r)^t
+$$
+
+<!-- $$Exponencial: -->
+<!-- P_{t} = -->
+<!-- e^{rt}$$ -->
+
+
+\scriptsize
+Los cuales son modelos estadísticos que utilizan datos del pasado de una variable en específico para posteriormente, encontrar patrones y realizar pronósticos sobre su comportamiento en el futuro cercano.
+
+\tiny
+Todos estos análisis fueron realizados con el lenguaje de programación  
+R (R Core Team 2016) en conjunto con los paquetes forecast (Hyndman 2016) y
+xts(Ryan y Ulrich 2014)
+
+#Facebook
+
+##Fans totales
+
+```{r, echo=F, comment= "", message= F, warning= F, fig.height=4}
+TotalF %>%  mutate(Date= as.Date(Date)) %>%
+  ggplot(aes(x=Date, y=Fans))+
+  geom_line(size=1, col="steelblue")+
+  theme_bw()+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.text.x = element_text(angle=45, hjust=1))+
+  scale_x_date(date_breaks = "6 months") +
+  scale_y_continuous(labels = scales::comma)+
+  ylab("Fans\nTotales") +xlab("")
+  annotate("text",x=as.Date("2017-01-20"),
+           y=1530000, label=format(max(TotalF$Fans),
+                                   big.mark = ",", scientific = F))
+
+```
+
+
+##Fans Online
+
+```{r, echo=F, comment= "", message= F, warning= F, fig.height=4}
+ggGrafo1 %>%  gather(tipo, valor, -fecha) %>%  
+  ggplot(aes(y=valor, x=fecha, colour=tipo))+
+  geom_point(size=0.2)+geom_line()+theme_bw()+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),legend.position = "top",
+        axis.text.x = element_text(angle=45, hjust=1))+
+  scale_x_date(date_breaks = "2 months") +
+  scale_y_continuous(labels = scales::comma)+ ##necesita el paquete scales
+  xlab("")+ ylab("Fans\nOnline")+
+  scale_color_manual(values=c("#3B5998", "darkred"), name="",
+                     labels=c("Observado Facebook", "Pronóstico" ))
+```
+
+\scriptsize
+Se espera un total de **1,303,588** fans online para el mes de Junio 2017.
+Si es comparado con el 31 de Diciembre de 2015 (**1,247,625**) se tendrá un crecimiento
+de **4.4%**, comparándolo la misma fecha con el día 27 de Enero de 2017 se
+tenía un crecimiento de **2.45%**.
+
+
+##Enganche
+```{r, echo=F, comment= "", message= F, warning= F, fig.height=4}
+ggGrafoEn %>%  gather(tipo, valor, -fecha) %>% 
+  ggplot(aes(x=fecha, y= valor, color= tipo))+ geom_point()+ geom_line()+
+  theme_bw()+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.text.x = element_text(angle=45, hjust=1),
+        legend.position="top")+
+  scale_x_date(date_breaks = "3 months") +
+  scale_y_continuous(labels = scales::comma)+ ##necesita el paquete scales
+  xlab("")+ ylab("Enganche")+
+  scale_color_manual(values=c("#3B5998", "black"),name="")
+```
+
+\scriptsize
+Hasta el mes de Diciembre de 2016 se tenía un enganche de **3%**,
+para este caso el mejor de los pronósticos sería el de mantener dicha tendencia mensual,
+por otro lado, se estima un enganche de **1 a 0.78%** en el peor de los casos.
+
+#Twitter
+
+##Crecimiento 
+```{r, echo=F, comment= "", message= F, warning= F, fig.height=4}
+ggGrafoTW %>%  gather(tipo, valor, -fecha) %>%  
+  ggplot(aes(x= fecha, y= valor, color= tipo))+ geom_line()+
+  theme_bw()+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.text.x = element_text(angle=45, hjust=1),
+        legend.position="top")+
+  scale_x_date(date_breaks = "2 months") +
+  scale_y_continuous(labels = scales::comma)+ ##necesita el paquete scales
+  xlab("")+ ylab("Seguidores")+
+  scale_color_manual(values=c("#326ada", "black"), name="")
+
+```
+
+\scriptsize
+Se esperan **303,719** seguidores en Twitter para el mes de Junio de 2017.
+Comparándolo con el 1 de Enero de 2016 (**283,660**) se tendrá un crecimiento de 
+**6.6%**, comparándola con la cifra del primero de Enero de 2017 (**301,303**)
+se tendrá un crecimiento de **0.79%**.
+
+##Menciones
+```{r, echo=F, comment= "", message= F, warning= F, fig.height=4}
+gggrafM %>% gather(tipo, valor, -fecha) %>% 
+  ggplot(aes(x=fecha, y=valor, color=tipo))+geom_line()+
+  theme_bw()+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.text.x = element_text(angle=45, hjust=1),
+        legend.position="top")+
+  scale_x_date(date_breaks = "6 months") +
+  scale_y_continuous(labels = scales::comma)+ ##necesita el paquete scales
+  xlab("")+ylab("Menciones")+
+  scale_color_manual(values=c("#326ada", "black"), name="")
+
+```
+
+\scriptsize
+Se espera un promedio de **21** menciones al día.
+
+
+##Retweets
+```{r, echo=F, comment= "", message= F, warning= F, fig.height=4}
+gggrafRTW %>% gather(tipo, valor, -fecha) %>% 
+  ggplot(aes(x=fecha, y=valor, color=tipo))+geom_line()+
+  theme_bw()+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.text.x = element_text(angle=45, hjust=1),
+        legend.position="top")+
+  scale_x_date(date_breaks = "2 months") +
+  scale_y_continuous(labels = scales::comma)+ ##necesita el paquete scales
+  xlab("")+ylab("Retweets")+
+  scale_color_manual(values=c("#326ada", "black"), name="")
+```
+
+\scriptsize
+Se espera un promedio de **20** retweets al día. 
+
+
+#Instagram
+
+##Crecimiento
+```{r, echo=F, comment= "", message= F, warning= F, fig.height=4}
+insta_logisgg %>%  ggplot(aes(x=fechas, y=valor, color=tipo))+
+  geom_line()+
+  theme_bw()+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.text.x = element_text(angle=45, hjust=1),
+        legend.position="top")+
+  scale_x_date(date_breaks = "3 months") +
+  scale_y_continuous(labels = scales::comma)+ ##necesita el paquete scales
+  xlab("")+ylab("Seguidores")+
+  scale_color_manual(values=c("#326ada", "darkred"), name="",
+                     labels=c("Pronóstico","Seguidores"))
+```
+
+\scriptsize
+Se espera un total de **34810** seguidores.
+Tomando como punto de comparación el número de seguidores desde el 
+1 de Enero de 2016 (**5699**) se crecerá un **610%**.
+Por otro lado si el punto de comparación es el 1 de Enero de 2017
+(**33208**) se tendrá un crecimiento de **4.6%**.
+
+
+##Interacción
+```{r, echo=F, comment= "", message= F, warning= F, fig.height=4}
+ggInig %>%  gather(tipo, valor, -Fechas) %>%
+  ggplot(aes(x=Fechas, y=valor, color=tipo))+
+  geom_line()+
+  theme_bw()+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.text.x = element_text(angle=45, hjust=1),
+        legend.position="top")+
+  scale_x_date(date_breaks = "3 months") +
+  scale_y_continuous(labels = scales::comma)+ ##necesita el paquete scales
+  xlab("")+ylab("Interacción")+
+  scale_color_manual(values=c("#326ada", "darkred"), name="",
+                     labels=c("Observado","Pronóstico"))
+```
+
+\scriptsize
+Se pronostican **5826** interacciones para el mes de Junio de 2017.
+Para el caso del intervalo Enero-Junio de 2017 la tendencia promedio
+es similar, con un promedio mensual de **5700** interacciones promedio. 
+
+#YouTube
+##Suscriptores
+```{r, echo=F, comment= "", message= F, warning= F, fig.height=4}
+ggyt %>%  gather(tipo, valor, -Fechas) %>%
+  ggplot(aes(x=Fechas, y=valor, color=tipo))+
+  geom_line()+
+  theme_bw()+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.text.x = element_text(angle=45, hjust=1),
+        legend.position="top")+
+  scale_x_date(date_breaks = "3 months") +
+  scale_y_continuous(labels = scales::comma)+ ##necesita el paquete scales
+  xlab("")+ylab("Suscriptores")+
+  scale_color_manual(values=c("#326ada", "darkred"), name="",
+                     labels=c("Observado","Pronóstico"))
+
+```
+
+\scriptsize
+Se pronostican **9155** suscriptores para el mes de Junio de 2017.
+
+#Sitio Web
+
+## Visitas
+```{r, echo=F, comment= "", message= F, warning= F, fig.height=4}
+ggVisita %>%  gather(tipo,valor, -fecha) %>%  
+  ggplot(aes(x=fecha, y=valor, color=tipo))+ geom_line()+
+  theme_bw()+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.text.x = element_text(angle=45, hjust=1),
+        legend.position="top")+
+  scale_x_date(date_breaks = "3 months") +
+  scale_y_continuous(labels = scales::comma)+ ##necesita el paquete scales
+  xlab("")+ylab("Visitas")+
+  scale_color_manual(values=c("#326ada", "darkred"), name="",
+                     labels=c("Pronóstico","Visitas"))
+```
+
+\scriptsize
+Se espera un promedio de **17000** visitas diarias en promedio para sitio Web.
+
+##Búsqueda de concesionarias (Dealer Search)
+```{r, echo=F, comment= "", message= F, warning= F, fig.height=4}
+ggDealer %>%  gather(tipo,valor, -fecha) %>%  
+  ggplot(aes(x=fecha, y=valor, color=tipo))+ geom_line()+
+  theme_bw()+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.text.x = element_text(angle=45, hjust=1),
+        legend.position="top")+
+  scale_x_date(date_breaks = "3 months") +
+  scale_y_continuous(labels = scales::comma)+ ##necesita el paquete scales
+  xlab("")+ylab("Búsqueda de concesionarias")+
+  scale_color_manual(values=c("#326ada", "darkred"), name="",
+                     labels=c("Búsqueda de concesionarias", "Pronóstico"))
+
+```
+
+\scriptsize
+Se espera un promedio de **235** búsquedas diarias en promedio para sitio Web.
+
+
+##Configuración de autos (Car configuration)
+```{r, echo=F, comment= "", message= F, warning= F, fig.height=4}
+ggCar %>%  gather(tipo,valor, -fecha) %>%  
+  ggplot(aes(x=fecha, y=valor, color=tipo))+ geom_line()+
+  theme_bw()+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.text.x = element_text(angle=45, hjust=1),
+        legend.position="top")+
+  scale_x_date(date_breaks = "3 months") +
+  scale_y_continuous(labels = scales::comma)+ ##necesita el paquete scales
+  xlab("")+ylab("Configuraciones de autos")+
+  scale_color_manual(values=c("#326ada", "darkred"), name="",
+                     labels=c("Configuraciones","Pronóstico"))
+```
+
+
+\scriptsize
+Se espera un promedio de **2135** configuraciones diarias en promedio para sitio Web.
+
+
+##Usuarios que regresan (Return rate)
+```{r, echo=F, comment= "", message= F, warning= F, fig.height=4}
+ggReturn %>%  gather(tipo,valor, -fecha) %>%  
+  ggplot(aes(x=fecha, y=valor, color=tipo))+ geom_line()+
+  theme_bw()+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.text.x = element_text(angle=45, hjust=1),
+        legend.position="top")+
+  scale_x_date(date_breaks = "3 months") +
+  scale_y_continuous(labels = scales::comma)+ ##necesita el paquete scales
+  xlab("")+ylab("Return Rate")+
+  scale_color_manual(values=c("#326ada", "darkred"), name="",
+                     labels=c("Pronóstico","Return Rate"))
+```
+
+\scriptsize
+Se espera un promedio de **6000** visitas tipo "Return Rate"
+diarias en promedio para sitio Web.
+
+
+
+##Vistas a la página (page Views)
+```{r, echo=F, comment= "", message= F, warning= F, fig.height=4}
 ggPage %>%  gather(tipo,valor, -fecha) %>%  
   ggplot(aes(x=fecha, y=valor, color=tipo))+ geom_line()+
   theme_bw()+
@@ -782,7 +824,44 @@ ggPage %>%  gather(tipo,valor, -fecha) %>%
         legend.position="top")+
   scale_x_date(date_breaks = "3 months") +
   scale_y_continuous(labels = scales::comma)+ ##necesita el paquete scales
-  xlab("Fecha") + ylab("Page Views")+
+  xlab("")+ylab("Page Views")+
   scale_color_manual(values=c("#326ada", "darkred"), name="",
                      labels=c("Pronóstico","Page Views"))
+```
+
+\scriptsize
+Se espera un promedio de **3183** visitas tipo "Page Views" 
+diarias en promedio para sitio Web.
+
+
+
+##Time Rate
+```{r, echo=F, comment= "", message= F, warning= F, fig.height=4}
+ggRate %>%  gather(tipo,valor, -fecha) %>%  
+  ggplot(aes(x=fecha, y=valor, color=tipo))+ geom_line()+
+  theme_bw()+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.text.x = element_text(angle=45, hjust=1),
+        legend.position="top")+
+  scale_x_date(date_breaks = "3 months") +
+  scale_y_continuous(labels = scales::comma)+ ##necesita el paquete scales
+   xlab("")+ylab("Time Rate")+
+  scale_color_manual(values=c("#326ada", "darkred"), name="",
+                     labels=c("Pronóstico", "Time Rate"))
+
+```
+
+\scriptsize
+Se espera un promedio de **7000** visitas tipo "Return Rate"
+diarias en promedio para sitio Web.
+
+
+
+
+
+#Gracias por su atención
+
+
+
 
