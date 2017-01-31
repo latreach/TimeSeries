@@ -361,6 +361,33 @@ INIG = INIG %>%as.data.frame %>%  cbind(data.frame(fechasInig)) %>%
 TSINIG = xts(INIG[,-1], as.Date(INIG[,1]))
 TSINIG %>%  plot(type="b")
 
+tmpIG =TSINIG[,1] %>%  na.omit()  %>% as.numeric
+tiempoIG = seq_along(tmpIG)
+
+nlm = nls(
+  tmpIG ~K *P0 *exp(R*tiempoIG) / (K + P0 *(exp(R*tiempoIG)-1)),
+  start = list(
+    P0 = min(tmpIG, na.rm=T),
+    K = max(tmpIG, na.rm = T),
+    R =0.1
+  ),
+  trace = T
+)
+
+time_log = 1:(length(tiempoIG) + 6)
+date_log = seq(ymd(20131201), by="month", length.out = max(time_log))
+pred.Ins = data.frame(fechas_ins = date_log,
+                      pronostico = predict(nlm, newdata = list(tiempoIG = time_log)))
+
+
+TSINIG[,1] %>%  as.numeric() %>% plot(type="b")
+pred.Ins[,2] %>%  lines
+
+
+
+
+
+
 # YouTube -----------------------------------------------------------------
 #Crecimiento
 YT = loadWorkbook(
