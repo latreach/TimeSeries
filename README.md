@@ -4,9 +4,9 @@ redes sociales de SEAT.
 
 # Modelos 
 ## Regresiones logísticas
-
-$$Logístico: \dot x = rx (1 - x/k)$$
-
+``` math
+Logístico: \dot x = rx (1 - x/k)
+```
 
 #Lenguajes de programación
 
