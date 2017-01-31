@@ -544,7 +544,7 @@ TotalF %>%  mutate(Date= as.Date(Date)) %>%
         axis.text.x = element_text(angle=45, hjust=1))+
   scale_x_date(date_breaks = "6 months") +
   scale_y_continuous(labels = scales::comma)+
-  ylab("Fans\nTotales") +xlab("")
+  ylab("Fans\nTotales") +xlab("")+
   annotate("text",x=as.Date("2017-01-20"),
            y=1530000, label=format(max(TotalF$Fans),
                                    big.mark = ",", scientific = F))
