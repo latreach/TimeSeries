@@ -285,7 +285,8 @@ DATE_Ptw15 = seq(ymd(20151201), by="day", length.out = max(TIME_PTW15))
 
 pred.tw15 = data.frame(fechas_tw=DATE_Ptw15,
                        pronostico = predict(logisticoT15,
-                                            newdata = list(TIME_tw15 = TIME_PTW15)))
+                                            newdata = list(TIME_tw15 = 
+                                                             TIME_PTW15)))
 
 twitter_logis15 = pred.tw15 %>%  left_join(seguidoresT15, by="fechas_tw")
 
