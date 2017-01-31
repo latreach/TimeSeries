@@ -4,7 +4,7 @@ redes sociales de SEAT.
 
 # Modelos 
 ## Regresiones logísticas
-``` math
+``` tex
 Logístico: \dot x = rx (1 - x/k)
 ```
 
