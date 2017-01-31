@@ -24,6 +24,9 @@ idFB_seat = 113144262054871
 ## Crecimiento
 fb = read.csv("~/local/Sandra_TimeSeries/2016.csv") %>% 
   mutate(Date = as.Date(Date))
+fb = read.csv("~/local/TimeSeries17//2016.csv") %>% 
+  mutate(Date = as.Date(Date))
+
 nombresFB<- names(fb)
 
 l1 = loadWorkbook("~/local/TimeSeries17/octubre2016-ene2017.xlsx")  
@@ -171,6 +174,7 @@ TW = loadWorkbook(
   "~/local/TimeSeries17/TW - Followers - SEAT México - 2017-01-27.xlsx") %>% 
   readWorksheet(sheet=2,startRow = 2) %>%  select(Date, Followers) %>% 
   mutate(Date = as.Date(Date))
+
 TSTW = xts(TW[,-1], TW[,1])
 fechas_tw = seq(ymd(20120824), by="day", length.out = length(TSTW[,1]))
 seguidores_t = cbind(seguidores= TSTW,
@@ -199,6 +203,40 @@ pred.tw = data.frame(fechas_tw = DATE_Ptw,
 twitter_logis = pred.tw %>%  left_join(seguidores_t, by="fechas_tw")
 twitter_logis = xts(twitter_logis[,-1], twitter_logis[,1])
 names(twitter_logis) <- c("Pronóstico de  seguidores", "Seguidores")
+
+##a partir de 2015
+seguidoresT15 = TSTW["2015-12-01/"] 
+fechas_tw15 = seq(ymd(20151201), by="day", 
+                  length.out = length(seguidoresT15[,1]))
+seguidoresT15 = cbind(seguidores = seguidoresT15, 
+                      diferenciado = diff(seguidoresT15),
+                      cambio_seguidores= diff.xts(log(seguidoresT15)))
+ultimotw15 = index(xts::last(seguidoresT15))
+TIME_tw15 = seq_along(seguidoresT15[,1])
+seguidoresT15 = data.frame(fechas_tw = fechas_tw15, seguidores = 
+                            seguidoresT15$seguidores %>%  as.numeric())
+numeros15 = seguidoresT15$seguidores
+
+logisticoT15 =
+  nls(
+    numeros15  ~
+      K *P0 *exp(R*TIME_tw15) / (K+ P0 *(exp(R*TIME_tw15)-1)),
+     start = list(
+      P0 = min(seguidoresT15$seguidores, na.rm = T),
+      K  = max(seguidoresT15$seguidores, na.rm = T),
+      R = 0.001
+    ),
+    trace = T
+  ) 
+TIME_PTW15  = 1:(length(TIME_tw15)+125)
+DATE_Ptw15 = seq(ymd(20151201), by="day", length.out = max(TIME_PTW15))
+pred.tw15 = data.frame(fechas_tw=DATE_Ptw15,
+                       pronostico = predict(logisticoT15,
+                                            newdata = list(TIME_tw15 = TIME_PTW15)))
+twitter_logis15 = pred.tw15 %>%  left_join(seguidoresT15, by="fechas_tw")
+twitter_logis15 = xts(twitter_logis15[,-1], twitter_logis15[,1])
+names(twitter_logis15) <- c("Pronóstico de  seguidores", "Seguidores")
+twitter_logis15 %>%  dygraph()
 
 
 
@@ -246,7 +284,25 @@ IN = loadWorkbook(
   "~/local/TimeSeries17/IG - Followers - SEAT México - 2017-01-27.xlsx") %>% 
   readWorksheet(sheet=2,startRow = 2) %>% select(Date, Followers) %>% 
   mutate(Date= as.Date(Date)) 
-TSIN = xts(IN[,-1], IN[,1])
+TSIN = xts(IN[,-1], IN[,1]) %>% .["2013-12-13/"]
+fechas_ins = seq(ymd(20131213), by="day", length.out = length(TSIN[,1]))
+TIME_diario = seq_along(TSIN[,1])
+nlm = nls(TSIN[,1] ~ P0 * exp(R * TIME_diario), start = list(P0 = 1e3, 
+                                                                   R = 0.005))
+
+TIME_PRED = 1:(length(TIME_diario) + 125)
+pred.XIN = data.frame(
+  fechas_ins = seq(ymd(20131213), by = "day",
+                   length.out = length(TSIN[,1]) + 125),
+  pronostico =predict(nlm, newdata = list(TIME_diario= TIME_PRED))
+)
+XIN = data.frame(fechas_ins, followers = TSIN[,1])
+XIN =   pred.XIN %>% left_join(XIN, by = "fechas_ins")
+XTSI = xts(XIN[, -1], XIN[, 1])
+names(XTSI) = c("Pronóstico de seguidores","Seguidores")
+XTSI_gg  = cbind(fechas = time(XTSI), XTSI %>%  data.frame())
+names(XTSI_gg) <- c("fechas", "pronostico", "seguidores")
+
 
 dic_2015 = TSIN["2015-12-31/"] 
 tmp = dic_2015[,1] %>%  na.omit()  %>% as.numeric
@@ -288,6 +344,23 @@ INIG = loadWorkbook(
   mutate(Date = as.Date(Date))
 TSINIG = xts(INIG[,-1], INIG[,1]) %>%  na.omit
 
+INIG %>%  mutate(anio= year(Date), mes=month(Date)) %>% na.omit() %>% 
+  select(anio, mes, Total.Interactions) %>% 
+  group_by(anio, mes) %>% summarise(promedio = mean(Total.Interactions %>% na.omit()))
+
+INIG = INIG %>%  mutate(anio= year(Date), mes=month(Date)) %>% 
+  select(anio, mes, Total.Interactions) %>% 
+  group_by(anio, mes) %>% summarise(suma = sum(Total.Interactions %>% na.omit())) 
+
+fechasInig = seq.POSIXt(from= as.POSIXct('2013-12-01'),
+                        to=as.POSIXct("2017-01-01"), by="month")
+
+INIG = INIG %>%as.data.frame %>%  cbind(data.frame(fechasInig)) %>%  
+  select(fechasInig, suma) %>% mutate(suma=ifelse(suma==0,NA, suma)) %>% na.omit()
+
+TSINIG = xts(INIG[,-1], as.Date(INIG[,1]))
+TSINIG %>%  plot(type="b")
+
 # YouTube -----------------------------------------------------------------
 #Crecimiento
 YT = loadWorkbook(
@@ -322,6 +395,26 @@ xts(seatWeb[,-7], as.Date(seatWeb[,7]) ) %>%.["2015-07-01/"]  %>%
 # Visitas -----------------------------------------------------------------
 Visitas = seatWeb %>%  select(fechaSeat, Visitas )
 TSVisita = xts(Visitas[,-1], as.Date(Visitas[,1])) %>% .["2015-07-01/"]
+modeloVisita = TSVisita  %>%  na.omit %>% 
+  coredata %>%  ts %>%  Arima(order = c(2,1,2)) %>% 
+  forecast(125) 
+
+ultimoV = index(xts::last(TSVisita)) %>% as.POSIXct()
+pronosticoV = xts(modeloVisita$mean, seq.POSIXt(ultimoV +1, length.out = 125, 
+                                           by= "day"))
+
+grafoV = cbind(TSVisita %>%  na.omit(), pronosticoV)
+names(grafoV) <- c("Visitas", "Estimación")
+
+dygraph(grafoV) %>% 
+  dyHighlight(highlightSeriesOpts = list(strokeWidth = 3),
+              highlightSeriesBackgroundAlpha = 0.2,
+              hideOnMouseOut= T) %>% 
+  dyAxis("y", label="Visitas") %>% 
+  dyOptions(drawGrid = F) %>% 
+  dyEvent(ultimoV, label= "Inician Pronósticos")
+
+
 
 
 # Car Configuration -------------------------------------------------------
@@ -329,12 +422,24 @@ CarConfiguration = seatWeb %>%  select(fechaSeat, CarConfiguration )
 TSCar = xts(CarConfiguration[,-1], as.Date(CarConfiguration[,1])) %>%
   .["2015-07-01/"]
 
+TSCar %>% na.omit %>% coredata %>% ts %>%  auto.arima() %>%
+  forecast(125) %>% plot
+
+TSCar %>%  na.omit %>% 
+  coredata %>%  ts %>% 
+  Arima(order= c(1,0,2)) %>% forecast(125) %>% plot
+
 
 # Return Rate -------------------------------------------------------------
 ReturnRate = seatWeb %>%  select(fechaSeat, Return.Rate)
 TSReturn = xts(ReturnRate[,-1], as.Date(ReturnRate[,1])) %>%
   .["2015-07-01/"]
 
+# TSReturn %>%  na.omit %>% coredata %>% ts %>% auto.arima() %>% 
+#   forecast(125) %>% plot
+
+TSReturn %>%  na.omit %>% coredata %>% ts %>% Arima(order=c(1,0,2)) %>% 
+  forecast(125) %>% plot
 
 
 # TimeRate ----------------------------------------------------------------
@@ -342,11 +447,17 @@ TimeRate = seatWeb %>%  select(fechaSeat, TimeRate)
 TSTime = xts(TimeRate[,-1], as.Date(TimeRate[,1])) %>%
   .["2015-07-01/"]
 
+TSTime %>%  na.omit %>% coredata %>% ts %>% auto.arima() %>% 
+  forecast(125) %>% plot
+
 
 # Dealer Search -----------------------------------------------------------
 Dealer = seatWeb %>%  select(fechaSeat, DealerSearch)
 TSDealer = xts(Dealer[,-1], as.Date(Dealer[,1])) %>%
   .["2015-10-01/"]
+
+TSDealer %>%  na.omit %>% coredata %>% ts %>% Arima(order=c(4,0,1)) %>% 
+  forecast(125) %>% plot
 
 
 # Page Views --------------------------------------------------------------
@@ -354,4 +465,6 @@ PageViews = seatWeb %>%  select(fechaSeat, PageViews)
 TSPage = xts(PageViews[,-1], as.Date(PageViews[,1])) %>%
   .["2015-07-01/"]
 
+TSPage %>%  na.omit %>% coredata %>% ts %>% Arima(order=c(5,0,1)) %>% 
+  forecast(125) %>% plot
 
