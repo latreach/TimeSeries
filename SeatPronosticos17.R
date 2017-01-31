@@ -234,10 +234,10 @@ RTW = loadWorkbook(
   "~/local/TimeSeries17/TW - Engagement - SEAT México - 2017-01-27.xlsx") %>% 
   readWorksheet(sheet=3,startRow = 2) %>%  select(Date, Retweets) %>% 
   mutate(Date = as.Date(Date))
-TSRTW = xts(RTW[,-1], RTW[,1]) %>%  na.omit()
-TSRTW %>% coredata %>%  ts %>% auto.arima() 
-TSRTW %>% coredata %>%  ts %>% Arima(order=c(1,0,3)) %>% forecast(125)
-(21.20142-27)/27*100
+TSRTW = xts(RTW[,-1], RTW[,1]) %>%  na.omit() %>% .['2016-01-01/']
+TSRTW %>% coredata %>%  ts %>% auto.arima() %>% forecast(125) %>%  plot
+TSRTW %>% coredata %>%  ts %>% Arima(order=c(2,1,3)) %>% forecast(125) %>% .$mean 
+TSRTW %>% coredata %>%  ts %>% Arima(order=c(1,0,3)) %>% forecast(125) %>% plot
 
 
 # Instagram ---------------------------------------------------------------
